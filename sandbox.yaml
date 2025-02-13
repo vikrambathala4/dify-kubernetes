@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox
+  namespace: dify
+  labels:
+    app: sandbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sandbox
+  template:
+    metadata:
+      labels:
+        app: sandbox
+    spec:
+      containers:
+      - name: sandbox
+        image: langgenius/dify-sandbox:0.2.10
+        env:
+        - name: API_KEY
+          value: "dify-sandbox"
+        - name: GIN_MODE
+          value: "release"
+        - name: WORKER_TIMEOUT
+          value: "15"
+        - name: ENABLE_NETWORK
+          value: "true"
+        - name: HTTP_PROXY
+          value: 'http://ssrf:3128'
+        - name: HTTPS_PROXY
+          value: 'http://ssrf:3128'
+        - name: SANDBOX_PORT
+          value: "8194"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        readinessProbe:
+          exec:
+            command:
+              - "curl"
+              - "-f"
+              - "http://localhost:8194/health"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        ports:
+        - containerPort: 8194
+        imagePullPolicy: IfNotPresent
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox
+  namespace: dify
+spec:
+  type: ClusterIP
+  selector:
+    app: sandbox
+  ports:
+  - port: 8194
+    targetPort: 8194
+    protocol: TCP
+

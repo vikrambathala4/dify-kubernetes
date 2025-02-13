@@ -1,0 +1,88 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  namespace: dify
+spec:
+  selector:
+    matchLabels:
+      app: db
+  serviceName: "db"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      securityContext:
+        runAsUser: 70
+        fsGroup: 70
+      initContainers:
+        - name: volume-permissions
+          image: busybox
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 70:70 /var/lib/postgresql/data
+          volumeMounts:
+            - name: db-pvc
+              mountPath: /var/lib/postgresql/data
+      containers:
+      - name: db
+        image: postgres:15-alpine
+        env:
+          - name: PGUSER
+            value: "postgres"
+          - name: POSTGRES_PASSWORD
+            value: "difyai123456"
+          - name: POSTGRES_DB
+            value: "dify"
+          - name: PGDATA
+            value: "/var/lib/postgresql/data/pgdata"
+        readinessProbe:
+          exec:
+            command:
+            - "pg_isready"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: db-pvc
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: db-pvc
+    spec:
+      accessModes:
+        - ReadWriteOnce  
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp2-encrypted
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: dify
+spec:
+  selector:
+    app: db
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

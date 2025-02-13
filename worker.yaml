@@ -1,0 +1,71 @@
+# Dify API Server Start
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: worker
+  labels:
+    app: worker
+  namespace: dify
+spec:
+  replicas: 1
+  minReadySeconds: 10
+  serviceName: worker
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: langgenius/dify-api:0.15.2
+        env:
+          - name: MODE
+            value: "worker"
+          - name: REDIS_PORT
+            value: "6379"
+          - name: DB_PORT
+            value: "5432"
+        envFrom:
+          - configMapRef:
+              name: worker-configmap
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        ports:
+        - containerPort: 5001
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: worker-pvc
+          mountPath: /app/api/storage
+  volumeClaimTemplates:
+  - metadata:
+      name: worker-pvc
+    spec:
+      accessModes:
+        - ReadWriteOnce  
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp2-encrypted
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker
+  namespace: dify
+spec:
+  type: ClusterIP
+  selector:
+    app: worker
+  ports:
+  - port: 5001
+    targetPort: 5001
+    protocol: TCP
+

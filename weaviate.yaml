@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: weaviate
+  namespace: dify
+spec:
+  selector:
+    matchLabels:
+      app: weaviate
+  serviceName: "weaviate"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: weaviate
+    spec:
+      containers:
+      - name: weaviate
+        image: semitechnologies/weaviate:1.19.0
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 102Mi
+        env:
+        - name: PERSISTENCE_DATA_PATH
+          value: "/var/lib/weaviate"
+        - name: QUERY_DEFAULTS_LIMIT
+          value: "25"
+        - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+          value: "false"
+        - name: "DEFAULT_VECTORIZER_MODULE"
+          value: "none"
+        - name: "CLUSTER_HOSTNAME"
+          value: "node1"
+        - name: "AUTHENTICATION_APIKEY_ENABLED"
+          value: "true"
+        - name: "AUTHENTICATION_APIKEY_ALLOWED_KEYS"
+          value: "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih"
+        - name: "AUTHENTICATION_APIKEY_USERS"
+          value: "hello@dify.ai"
+        - name: "AUTHORIZATION_ADMINLIST_ENABLED"
+          value: "true"
+        - name: "AUTHORIZATION_ADMINLIST_USERS"
+          value: "hello@dify.ai"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: weaviate-pvc
+          mountPath: /var/lib/weaviate
+  volumeClaimTemplates:
+  - metadata:
+      name: weaviate-pvc
+    spec:
+      accessModes:
+        - ReadWriteOnce  
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp2-encrypted
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weaviate
+  namespace: dify
+spec:
+  selector:
+    app: weaviate
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080

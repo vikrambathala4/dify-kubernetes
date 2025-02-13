@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: dify
+  labels:
+    app: web
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: langgenius/dify-web:0.15.2
+        env:
+          - name: CONSOLE_API_URL
+            value: ""
+          - name: APP_API_URL
+            value: ""
+          - name: SENTRY_DSN
+            value: ""
+          - name: NEXT_TELEMETRY_DISABLED
+            value: "0"
+          - name: TEXT_GENERATION_TIMEOUT_MS
+            value: "60000"
+          - name: CSP_WHITELIST
+            value: ""
+          - name: TOP_K_MAX_VALUE
+            value: ""
+          - name: INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
+            value: ""
+        resources:  
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: IfNotPresent
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: dify
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+
